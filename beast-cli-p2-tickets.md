@@ -19,12 +19,12 @@ Implement git integration with Aider-style 6-flag attribution and Claude Code sa
 ```
 src/
 ├── git/
-│   ├── mod.rs              # Git entry
-│   ├── repo.rs             # Repo operations
-│   ├── commit.rs           # Commit with attribution
-│   ├── diff.rs             # Diff generation
-│   ├── ghost.rs             # Ghost commits
-│   └── branch.rs           # Branch utilities
+│   ├── index.ts            # Git entry
+│   ├── repo.ts             # Repo operations
+│   ├── commit.ts           # Commit with attribution
+│   ├── diff.ts             # Diff generation
+│   ├── ghost.ts            # Ghost commits
+│   └── branch.ts           # Branch utilities
 ```
 
 ### Key Implementations
@@ -67,10 +67,10 @@ Implement Aider's PageRank-based codebase understanding for intelligent file sel
 ```
 src/
 ├── repomap/
-│   ├── mod.rs              # RepoMap entry
-│   ├── pagerank.rs         # PageRank algorithm
-│   ├── parser.rs           # Tree-sitter extraction
-│   └── cache.rs             # SQLite cache
+│   ├── index.ts            # RepoMap entry
+│   ├── pagerank.ts         # PageRank algorithm
+│   ├── parser.ts           # Tree-sitter extraction
+│   └── cache.ts            # SQLite cache
 ```
 
 ### Key Implementations
@@ -110,11 +110,11 @@ Implement context compaction with 50K token budget and image stripping.
 ```
 src/
 ├── compaction/
-│   ├── mod.rs              # Compaction entry
-│   ├── budget.rs           # Token budgeting
-│   ├── prune.rs             # Message pruning
-│   ├── restore.rs           # File restoration
-│   └── strip.rs             # Image stripping
+│   ├── index.ts            # Compaction entry
+│   ├── budget.ts            # Token budgeting
+│   ├── prune.ts            # Message pruning
+│   ├── restore.ts          # File restoration
+│   └── strip.ts            # Image stripping
 ```
 
 ### Key Implementations
@@ -154,11 +154,11 @@ Implement pre/post tool hooks with YAML configuration.
 ```
 src/
 ├── hooks/
-│   ├── mod.rs              # Hooks entry
-│   ├── registry.rs          # Hook registry
-│   ├── config.rs            # YAML config
-│   ├── executor.rs           # Hook execution
-│   └── types.rs             # Hook types
+│   ├── index.ts            # Hooks entry
+│   ├── registry.ts         # Hook registry
+│   ├── config.ts           # YAML config
+│   ├── executor.ts         # Hook execution
+│   └── types.ts            # Hook types
 ```
 
 ### Hook Types
@@ -207,14 +207,14 @@ Implement OpenCode's Effect-based LSP with 28+ language servers.
 ```
 src/
 ├── lsp/
-│   ├── mod.rs              # LSP entry
-│   ├── server.rs           # Server management
-│   ├── client.rs            # vscode-jsonrpc client
-│   ├── hover.rs             # Hover provider
-│   ├── goto.rs              # Go-to-definition
-│   ├── refs.rs              # References
-│   ├── diag.rs              # Diagnostics
-│   └── install.rs           # Server auto-install
+│   ├── index.ts            # LSP entry
+│   ├── server.ts           # Server management
+│   ├── client.ts           # vscode-jsonrpc client
+│   ├── hover.ts            # Hover provider
+│   ├── goto.ts             # Go-to-definition
+│   ├── refs.ts             # References
+│   ├── diag.ts             # Diagnostics
+│   └── install.ts          # Server auto-install
 ```
 
 ### Supported Languages (28+)
@@ -257,8 +257,8 @@ Implement Aider's two-model architect mode where architect designs and editor im
 ```
 src/
 ├── modes/
-│   ├── architect.rs        # Architect mode
-│   └── dual.rs             # Dual model config
+│   ├── architect.ts        # Architect mode
+│   └── dual.ts             # Dual model config
 ```
 
 ### Key Implementations
@@ -296,10 +296,10 @@ Implement tree-sitter for syntax-aware file understanding.
 ```
 src/
 ├── parsers/
-│   ├── mod.rs              # Parser entry
-│   ├── tree_sitter.rs       # Tree-sitter bindings
-│   ├── extract.rs           # Definition extraction
-│   └── tags.rs             # Tags generation
+│   ├── index.ts            # Parser entry
+│   ├── tree_sitter.ts      # Tree-sitter bindings
+│   ├── extract.ts          # Definition extraction
+│   └── tags.ts             # Tags generation
 ```
 
 ### Key Implementations
@@ -338,9 +338,9 @@ Implement Aider's `// ai!` comment system for inline AI commands.
 ```
 src/
 ├── ai_comments/
-│   ├── mod.rs              # AI comments entry
-│   ├── parser.rs            # Comment parser
-│   └── watcher.rs           # File watcher
+│   ├── index.ts            # AI comments entry
+│   ├── parser.ts           # Comment parser
+│   └── watcher.ts          # File watcher
 ```
 
 ### Comment Patterns

@@ -38,14 +38,32 @@
 
 ## P1-02: TUI Framework
 
-### Ratatui Main
+### Ink Components (Cline)
 | Attribute | Details |
 |-----------|---------|
-| **Source File** | `/home/sridhar/codex/codex-rs/tui/src/lib.rs` |
-| **Lines** | 500+ |
-| **How it works** | 1. Declares widgets as struct fields (chat, status, key_hints) |
-| | 2. `App` struct holds state, `run()` starts event loop |
-| | 3. Crossterm handles keyboard input, renders via frames |
+| **Source File** | `/home/sridhar/cline/cli/src/components/` |
+| **Files** | 20+ |
+| **How it works** | 1. React components using Ink for CLI rendering |
+| | 2. `<Box>`, `<Text>`, `<Color>` primitives from ink |
+| | 3. Event handling via `<StdinContext>` |
+
+### Ink Main (Cline)
+| Attribute | Details |
+|-----------|---------|
+| **Source File** | `/home/sridhar/cline/cli/src/App.tsx` |
+| **Lines** | 300+ |
+| **How it works** | 1. `<render>` component with full app tree |
+| | 2. `<StdinContext>` for keyboard input |
+| | 3. `<Static>` for non-scrolling output areas |
+
+### Markdown Rendering
+| Attribute | Details |
+|-----------|---------|
+| **Source File** | `/home/sridhar/cline/src/utils/markdown.ts` |
+| **Lines** | 100 |
+| **How it works** | 1. Uses `marked` library for markdown parsing |
+| | 2. Custom renderers for code blocks with syntax highlighting |
+| | 3. Resolves local file links relative to workspace |
 
 ### Desktop Notifications
 | Attribute | Details |
@@ -55,24 +73,6 @@
 | **How it works** | 1. OSC 9 escape sequences for WezTerm, ghostty, iTerm |
 | | 2. BEL character (`\x07`) fallback for unsupported terminals |
 | | 3. Detects terminal via `TERM_PROGRAM`, `TERM`, platform |
-
-### Markdown Rendering
-| Attribute | Details |
-|-----------|---------|
-| **Source File** | `/home/sridhar/codex/codex-rs/tui/src/markdown_render.rs` |
-| **Lines** | 300 |
-| **How it works** | 1. Uses pulldown-cmark to parse markdown into events |
-| | 2. Renders to tui-rs Spans with custom styling |
-| | 3. Local file links resolved relative to CWD |
-
-### Job Control
-| Attribute | Details |
-|-----------|---------|
-| **Source File** | `/home/sridhar/codex/codex-rs/core/src/unified_exec/` |
-| **Lines** | 400+ |
-| **How it works** | 1. PTY allocation for terminal emulation |
-| | 2. Signal handling for Ctrl+Z (SIGTSTP) |
-| | 3. fg command resumes via SIGCONT |
 
 ---
 
@@ -99,11 +99,11 @@
 ### Streaming
 | Attribute | Details |
 |-----------|---------|
-| **Source File** | `/home/sridhar/codex/codex-rs/tui/src/streaming/mod.rs` |
+| **Source File** | `/home/sridhar/opencode/packages/opencode/src/streaming/` |
 | **Lines** | 200+ |
-| **How it works** | 1. Queue management with MarkdownStreamCollector |
-| | 2. Newline-gated emission (don't show until newline) |
-| | 3. Age-based policy for queue draining |
+| **How it works** | 1. Streams AI responses incrementally |
+| | 2. Buffer management for smooth display |
+| | 3. Cancellation support via AbortController |
 
 ---
 
@@ -153,12 +153,12 @@
 | | 2. Session ID ties messages to session |
 | | 3. History queryable by time range |
 
-### State (Codex-RS)
+### State (OpenCode)
 | Attribute | Details |
 |-----------|---------|
-| **Source File** | `/home/sridhar/codex/codex-rs/state/src/runtime.rs` |
+| **Source File** | `/home/sridhar/opencode/packages/opencode/src/session/index.ts` |
 | **Lines** | 300+ |
-| **How it works** | 1. SQLite-backed persistent state |
+| **How it works** | 1. SQLite-backed persistent state via sql.js |
 | | 2. Thread metadata storage |
 | | 3. Memory state management |
 
@@ -186,24 +186,22 @@ export function defineToolEffect<T, R>(
   id: string,
   execute: (args: T, ctx: Context) => Effect<ToolResult, Error, R>
 ): Effect<ToolInfo, never, R>
-// Cancellation via AbortSignal in Context
+// Cancellation via AbortController
 await ctx.abort
 ```
 
-### Ratatui Widget (Rust)
-```rust
-struct App {
-  chat: ChatWidget,
-  status: StatusBar,
-  key_hints: KeyHints,
-}
+### Ink Component (TypeScript)
+```typescript
+import { Box, Text, render } from 'ink'
+import React from 'react'
 
-impl Widget for App {
-  fn render(self, area: Rect, buf: &mut Buffer) {
-    self.chat.render(area, buf);
-    self.status.render(area, buf);
-  }
-}
+const App = () => (
+  <Box>
+    <Text>Hello, Beast CLI!</Text>
+  </Box>
+)
+
+render(<App />)
 ```
 
 ---

@@ -19,17 +19,17 @@ Implement Cline's McpHub (59KB) with multi-transport support, OAuth, and tool di
 ```
 src/
 ├── mcp/
-│   ├── mod.rs              # MCP entry
-│   ├── hub.rs               # McpHub (59KB reference)
-│   ├── client.rs             # MCP client
-│   ├── oauth.rs              # OAuth 2.0 + PKCE
+│   ├── index.ts            # MCP entry
+│   ├── hub.ts              # McpHub
+│   ├── client.ts           # MCP client
+│   ├── oauth.ts            # OAuth 2.0 + PKCE
 │   ├── transport/
-│   │   ├── mod.rs           # Transport trait
-│   │   ├── stdio.rs         # Stdio transport
-│   │   ├── sse.rs           # SSE transport
-│   │   └── http.rs          # StreamableHTTP
-│   ├── tools.rs             # Tool conversion
-│   └── config.rs            # Config schema
+│   │   ├── index.ts        # Transport interface
+│   │   ├── stdio.ts        # Stdio transport
+│   │   ├── sse.ts          # SSE transport
+│   │   └── http.ts         # StreamableHTTP
+│   ├── tools.ts            # Tool conversion
+│   └── config.ts           # Config schema
 ```
 
 ### Key Implementations
@@ -73,13 +73,13 @@ Implement multi-provider support using Cline's factory pattern with 40+ provider
 ```
 src/
 ├── providers/
-│   ├── mod.rs              # Provider factory
-│   ├── anthropic.rs         # Anthropic handler
-│   ├── openai.rs            # OpenAI handler
-│   ├── ollama.rs             # Ollama handler
-│   ├── openrouter.rs         # OpenRouter handler
-│   ├── gemini.rs             # Gemini handler
-│   └── bedrock.rs            # AWS Bedrock handler
+│   ├── index.ts            # Provider factory
+│   ├── anthropic.ts        # Anthropic handler
+│   ├── openai.ts           # OpenAI handler
+│   ├── ollama.ts           # Ollama handler
+│   ├── openrouter.ts       # OpenRouter handler
+│   ├── gemini.ts           # Gemini handler
+│   └── bedrock.ts          # AWS Bedrock handler
 ```
 
 ### Supported Providers (40+)
@@ -124,14 +124,14 @@ Implement model-specific prompt variants using Cline's Builder pattern.
 ```
 src/
 ├── prompt/
-│   ├── mod.rs              # Prompt entry
-│   ├── registry.rs          # Prompt registry
-│   ├── builder.rs           # Prompt builder
-│   ├── components.rs        # Reusable sections
+│   ├── index.ts            # Prompt entry
+│   ├── registry.ts          # Prompt registry
+│   ├── builder.ts          # Prompt builder
+│   ├── components.ts       # Reusable sections
 │   └── variants/
-│       ├── generic.rs       # Generic model
-│       ├── next_gen.rs      # Claude 4, GPT-5
-│       └── xs.rs            # Small context
+│       ├── generic.ts      # Generic model
+│       ├── next_gen.ts     # Claude 4, GPT-5
+│       └── xs.ts           # Small context
 ```
 
 ### Key Implementations
@@ -171,7 +171,7 @@ Implement Codex-RS's ghost commit system for snapshots without history pollution
 ```
 src/
 ├── git/
-│   └── ghost.rs             # Ghost commit impl
+│   └── ghost.ts            # Ghost commit impl
 ```
 
 ### Key Implementations
@@ -210,7 +210,7 @@ Implement Aider's LazyLiteLLM pattern for 1.5s startup time savings.
 ```
 src/
 ├── llm/
-│   └── lazy.rs             # Lazy LLM loader
+│   └── lazy.ts             # Lazy LLM loader
 ```
 
 ### Key Implementations
@@ -246,10 +246,10 @@ Implement voice input using system audio capture.
 ```
 src/
 ├── voice/
-│   ├── mod.rs              # Voice entry
-│   ├── input.rs             # Audio capture
-│   ├── stt.rs               # Speech-to-text
-│   └── config.rs            # Config
+│   ├── index.ts            # Voice entry
+│   ├── input.ts            # Audio capture
+│   ├── stt.ts             # Speech-to-text
+│   └── config.ts           # Config
 ```
 
 ### Key Implementations
@@ -288,9 +288,9 @@ Implement URL fetching and conversion to markdown.
 ```
 src/
 ├── web/
-│   ├── mod.rs              # Web entry
-│   ├── fetch.rs             # Web fetcher
-│   └── markdown.rs          # HTML to markdown
+│   ├── index.ts            # Web entry
+│   ├── fetch.ts            # Web fetcher
+│   └── markdown.ts          # HTML to markdown
 ```
 
 ### Key Implementations
@@ -326,10 +326,10 @@ Implement auto-lint after code changes (Aider's --auto-lint).
 ```
 src/
 ├── lint/
-│   ├── mod.rs              # Lint entry
-│   ├── runner.rs            # Lint runner
-│   ├── flake8.rs            # Flake8 integration
-│   └── config.rs            # Config
+│   ├── index.ts            # Lint entry
+│   ├── runner.ts           # Lint runner
+│   ├── flake8.ts           # Flake8 integration
+│   └── config.ts          # Config
 ```
 
 ### Key Implementations

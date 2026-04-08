@@ -19,11 +19,11 @@ Implement Claude Code's memory taxonomy with typed files, staleness warnings, an
 ```
 src/
 ├── memory/
-│   ├── mod.rs              # Memory entry
-│   ├── store.rs             # File-based storage
-│   ├── query.rs              # Memory search
-│   ├── taxonomy.rs           # Typed memory
-│   └── sync.rs              # Team memory sync
+│   ├── index.ts            # Memory entry
+│   ├── store.ts            # File-based storage
+│   ├── query.ts            # Memory search
+│   ├── taxonomy.ts        # Typed memory
+│   └── sync.ts            # Team memory sync
 ```
 
 ### Memory Types
@@ -109,11 +109,11 @@ Implement Codex-RS's sandbox using Landlock, Seatbelt, and Windows Restricted To
 ```
 src/
 ├── sandbox/
-│   ├── mod.rs              # Sandbox entry
-│   ├── landlock.rs          # Linux Landlock
-│   ├── seatbelt.rs          # macOS Seatbelt
-│   ├── windows.rs            # Windows Restricted Token
-│   └── policy.rs            # Policy engine
+│   ├── index.ts            # Sandbox entry
+│   ├── landlock.ts         # Linux Landlock
+│   ├── seatbelt.ts         # macOS Seatbelt
+│   ├── windows.ts          # Windows Restricted Token
+│   └── policy.ts           # Policy engine
 ```
 
 ### Sandbox Modes
@@ -161,7 +161,7 @@ Implement OpenCode's batch tool for concurrent execution.
 ```
 src/
 ├── tools/
-│   └── batch.rs            # Batch execution
+│   └── batch.ts            # Batch execution
 ```
 
 ### Key Implementations
@@ -192,7 +192,7 @@ Implement Codex-RS's collaboration modes with mode-specific behavior.
 ```
 src/
 ├── modes/
-│   └── collab.rs           # Collaboration modes
+│   └── collab.ts           # Collaboration modes
 ```
 
 ### Key Implementations

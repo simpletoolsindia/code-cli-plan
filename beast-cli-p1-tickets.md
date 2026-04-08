@@ -67,30 +67,28 @@ src/
 **Priority**: P0 (Critical)
 
 ### Description
-Build the CLI UI using Rust Ratatui for best markdown rendering, desktop notifications, and job control.
+Build the CLI UI using Ink (React) for best markdown rendering, desktop notifications, and job control.
 
 ### Files to Create
 ```
 src/
-├── ui/
-│   ├── tui.rs              # Main Tui struct
-│   ├── app.rs              # App state + event loop
-│   ├── chat.rs             # Chat widget
-│   ├── markdown.rs          # Markdown rendering
-│   ├── color.rs             # Color utilities (CIE76)
-│   ├── status.rs            # Status bar
-│   ├── notifications.rs     # Desktop notifications
-│   ├── key_hint.rs          # Keyboard hints
-│   └── diff.rs              # Diff display
+├── tui/
+│   ├── App.tsx             # Main App
+│   ├── Chat.tsx             # Chat widget
+│   ├── StatusBar.tsx        # Status bar
+│   ├── Markdown.tsx         # Markdown rendering
+│   ├── Diff.tsx             # Diff display
+│   ├── Notifications.tsx     # Desktop notifications
+│   └── KeyHints.tsx         # Keyboard hints
 ```
 
 ### Key Implementations
-1. Ratatui-based TUI with Crossterm input
-2. Markdown rendering with syntax highlighting
-3. Desktop notifications (OSC 9 + BEL fallback)
+1. Ink-based TUI with interactive components
+2. Markdown rendering with syntax highlighting (using `marked`)
+3. Desktop notifications via terminal bell
 4. Job control (Ctrl+Z suspend/resume)
-5. Theme picker system
-6. File link handling (shows actual paths)
+5. Theme/color system
+6. File link handling
 
 ### How to Test
 - Render markdown with code blocks, links, tables
@@ -108,8 +106,8 @@ src/
 - [ ] Theme switching changes colors
 
 ### Reference
-- Source: `/home/sridhar/codex/codex-rs/tui/src/lib.rs`
-- Notifications: `/home/sridhar/codex/codex-rs/tui/src/notifications/mod.rs`
+- Source: `/home/sridhar/cline/cli/src/components/` (Ink components)
+- Pattern: Ink + React for CLI rendering
 
 ---
 
@@ -125,16 +123,15 @@ Implement the main agent loop with turn management, streaming, and Effect-based 
 ```
 src/
 ├── engine/
-│   ├── mod.rs              # Main engine entry
-│   ├── loop.rs             # Agent loop
-│   ├── turn.rs             # Turn management
-│   ├── streaming.rs         # Response streaming
-│   ├── token.rs            # Token counting
-│   └── error.rs            # Error types
+│   ├── index.ts            # Main engine entry
+│   ├── loop.ts             # Agent loop
+│   ├── turn.ts             # Turn management
+│   ├── streaming.ts        # Response streaming
+│   └── token.ts            # Token counting
 ├── effect/
-│   ├── mod.rs              # Effect module
-│   ├── service.rs           # Service layer DI
-│   └── context.rs           # Effect context
+│   ├── index.ts            # Effect module
+│   ├── service.ts          # Service layer DI
+│   └── context.ts          # Effect context
 ```
 
 ### Key Implementations
@@ -142,8 +139,8 @@ src/
 2. Streaming with incremental rendering
 3. Token counting with sampling for large files
 4. Effect-based async (no blocking)
-5. Cancellation via AbortSignal
-6. Service dependency injection
+5. Cancellation via AbortController
+6. Service dependency injection via Effect patterns
 
 ### How to Test
 - Run multi-turn conversation
@@ -176,11 +173,11 @@ Implement mode switching with Plan mode (read-only) and Execution mode (full acc
 ```
 src/
 ├── modes/
-│   ├── mod.rs              # Mode registry
-│   ├── plan.rs             # Plan mode
-│   ├── execution.rs        # Execution mode
-│   ├── permissions.rs       # 6 permission modes
-│   └── commands.rs          # /plan, /auto commands
+│   ├── index.ts            # Mode registry
+│   ├── plan.ts             # Plan mode
+│   ├── execution.ts        # Execution mode
+│   ├── permissions.ts      # 6 permission modes
+│   └── commands.ts         # /plan, /auto commands
 ```
 
 ### Permission Modes
@@ -234,10 +231,10 @@ Implement YAML-based configuration with environment variable expansion.
 ```
 src/
 ├── config/
-│   ├── mod.rs              # Config entry
-│   ├── yaml.rs              # YAML parser
-│   ├── env.rs               # Env expansion
-│   └── schema.rs            # Config validation
+│   ├── index.ts            # Config entry
+│   ├── yaml.ts             # YAML parser
+│   ├── env.ts              # Env expansion
+│   └── schema.ts           # Config validation
 ```
 
 ### Key Implementations
@@ -277,19 +274,19 @@ Implement SQLite-backed state persistence for sessions, history, and cache.
 ```
 src/
 ├── state/
-│   ├── mod.rs              # State entry
-│   ├── db.rs               # SQLite connection
-│   ├── session.rs           # Session storage
-│   ├── history.rs           # Chat history
-│   └── cache.rs             # Cache management
+│   ├── index.ts            # State entry
+│   ├── db.ts               # SQLite connection (sql.js)
+│   ├── session.ts          # Session storage
+│   ├── history.ts          # Chat history
+│   └── cache.ts            # Cache management
 ```
 
 ### Key Implementations
-1. SQLite with JSON storage
+1. sql.js (SQLite in WASM) for persistent storage
 2. Session persistence across restarts
 3. Chat history with search
 4. Cache with TTL
-5. Migration system
+5. JSON serialization for complex types
 
 ### How to Test
 - Start session, verify state saved

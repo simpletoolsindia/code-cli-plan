@@ -19,10 +19,10 @@ Implement coordinator pattern for multi-agent workflows (Claude Code's agent swa
 ```
 src/
 ├── agents/
-│   ├── mod.rs              # Agents entry
-│   ├── coordinator.rs       # Coordinator agent
-│   ├── worker.rs             # Worker agent
-│   └── messages.rs           # Inter-agent messages
+│   ├── index.ts            # Agents entry
+│   ├── coordinator.ts      # Coordinator agent
+│   ├── worker.ts           # Worker agent
+│   └── messages.ts         # Inter-agent messages
 ```
 
 ### Key Implementations
@@ -56,23 +56,23 @@ src/
 **Priority**: Future
 
 ### Description
-Wrap CLI in Tauri desktop app.
+Wrap CLI in Electron desktop app for cross-platform desktop experience.
 
 ### Files to Create
 ```
 desktop/
 ├── src/
-│   ├── main.rs              # Tauri entry
-│   ├── app.rs               # Desktop app logic
-│   └── tray.rs              # System tray
+│   ├── main.ts             # Electron main process
+│   ├── preload.ts          # Preload script
+│   └── window.ts           # Window management
 ```
 
 ### Key Implementations
-1. Tauri 2.x with Rust backend
-2. System tray integration
-3. Global shortcuts
-4. Desktop notifications
-5. WebView-based UI
+1. Electron with TypeScript (electron-forge)
+2. System tray integration via Electron APIs
+3. Global shortcuts registration
+4. Desktop notifications via native notifications API
+5. BrowserWindow-based UI
 
 ### How to Test
 - Launch desktop app

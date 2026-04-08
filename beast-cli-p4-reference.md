@@ -51,21 +51,21 @@
 
 ## P4-03: Sandbox Security
 
-### Landlock (Linux)
+### Landlock (Linux) - TypeScript Bindings
 | Attribute | Details |
 |-----------|---------|
 | **Source File** | `/home/sridhar/codex/codex-rs/linux-sandbox/src/lib.rs` |
 | **Lines** | 300+ |
-| **How it works** | 1. Uses Linux Landlock syscall to restrict filesystem access |
+| **How it works** | 1. Node.js FFI bindings to Landlock syscall |
 | | 2. Rules defined per directory: read-only, write, deny |
 | | 3. Falls back to bubblewrap if Landlock unavailable |
 
-### Seatbelt (macOS)
+### Seatbelt (macOS) - TypeScript Bindings
 | Attribute | Details |
 |-----------|---------|
 | **Source File** | `/home/sridhar/codex/codex-rs/macos-sandbox/src/lib.rs` |
 | **Lines** | 200+ |
-| **How it works** | 1. Uses macOS Seatbelt (sandbox_execute) for sandboxing |
+| **How it works** | 1. Native module for macOS sandbox_execute |
 | | 2. Configurable profiles: read-only, workspace-write |
 | | 3. Integrates with ExecPolicy engine |
 
