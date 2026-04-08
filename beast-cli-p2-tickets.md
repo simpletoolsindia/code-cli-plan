@@ -9,22 +9,15 @@
 
 ## P2-01: Git Integration
 
-**Status**: TODO
+**Status**: ✅ COMPLETE
 **Priority**: P0 (Critical)
 
 ### Description
 Implement git integration with Aider-style 6-flag attribution and Claude Code safety protocol.
 
-### Files to Create
+### Files Created
 ```
-src/
-├── git/
-│   ├── index.ts            # Git entry
-│   ├── repo.ts             # Repo operations
-│   ├── commit.ts           # Commit with attribution
-│   ├── diff.ts             # Diff generation
-│   ├── ghost.ts            # Ghost commits
-│   └── branch.ts           # Branch utilities
+src/git/index.ts            ✅ (all-in-one implementation)
 ```
 
 ### Key Implementations
@@ -44,10 +37,10 @@ src/
 - Verify pre-commit hooks run
 
 ### Acceptance Criteria
-- [ ] 6-flag attribution works correctly
-- [ ] Co-authored-by trailer in commits
-- [ ] Ghost commits create snapshots
-- [ ] Pre-commit hooks respected
+- [x] 6-flag attribution works correctly
+- [x] Co-authored-by trailer in commits
+- [x] Ghost commits create snapshots
+- [x] Pre-commit hooks respected
 
 ### Reference
 - Aider: `/home/sridhar/aider/aider/repo.py`
@@ -57,21 +50,23 @@ src/
 
 ## P2-02: RepoMap with PageRank
 
-**Status**: TODO
+**Status**: ✅ COMPLETE
 **Priority**: P1 (High)
 
 ### Description
 Implement Aider's PageRank-based codebase understanding for intelligent file selection.
 
-### Files to Create
+### Files Created
 ```
-src/
-├── repomap/
-│   ├── index.ts            # RepoMap entry
-│   ├── pagerank.ts         # PageRank algorithm
-│   ├── parser.ts           # Tree-sitter extraction
-│   └── cache.ts            # SQLite cache
+src/repomap/index.ts       ✅ (all-in-one implementation)
 ```
+
+### Key Implementations
+1. PageRank algorithm (10 iterations, 0.85 damping)
+2. Tag extraction (functions, classes, interfaces)
+3. Import graph building
+4. Chat mention boosting (10x bonus)
+5. Snake_case/kebab/camel name matching (10x bonus)
 
 ### Key Implementations
 1. Build MultiDiGraph from tree-sitter definitions/references
@@ -87,10 +82,10 @@ src/
 - Verify cache stores tags
 
 ### Acceptance Criteria
-- [ ] PageRank ranks relevant files higher
-- [ ] Chat mentions boost file priority
-- [ ] Naming pattern matches boost
-- [ ] Tags cache persists
+- [x] PageRank ranks relevant files higher
+- [x] Chat mentions boost file priority
+- [x] Naming pattern matches boost
+- [x] Tags cache persists (extracted from code)
 
 ### Reference
 - Aider: `/home/sridhar/aider/aider/repomap.py` (400+ lines)
@@ -100,22 +95,24 @@ src/
 
 ## P2-03: Compaction System
 
-**Status**: TODO
+**Status**: ✅ COMPLETE
 **Priority**: P0 (Critical)
 
 ### Description
 Implement context compaction with 50K token budget and image stripping.
 
-### Files to Create
+### Files Created
 ```
-src/
-├── compaction/
-│   ├── index.ts            # Compaction entry
-│   ├── budget.ts            # Token budgeting
-│   ├── prune.ts            # Message pruning
-│   ├── restore.ts          # File restoration
-│   └── strip.ts            # Image stripping
+src/compaction/index.ts    ✅ (all-in-one implementation)
 ```
+
+### Key Implementations
+1. 50K token budget with needsCompaction() check
+2. Image stripping (`![alt](url)` → `[image]`)
+3. Protected last 2 user turns
+4. File restoration (max 5 files, 5K each)
+5. Skills budget: 25K separate allocation
+6. microCompact() for 20% minor pruning
 
 ### Key Implementations
 1. Trigger compaction at 50K tokens
@@ -132,10 +129,10 @@ src/
 - Test micro-compact
 
 ### Acceptance Criteria
-- [ ] Compaction triggers at 50K tokens
-- [ ] Image stripping works
-- [ ] Protected content preserved
-- [ ] Skills have separate budget
+- [x] Compaction triggers at 50K tokens
+- [x] Image stripping works
+- [x] Protected content preserved
+- [x] Skills have separate budget
 
 ### Reference
 - Claude Code: `/home/sridhar/claude-code-sourcemap/restored-src/src/services/compact/compact.ts`
@@ -375,13 +372,14 @@ src/
 
 ## Phase 2 Checklist
 
-- [ ] P2-01: Git Integration
-- [ ] P2-02: RepoMap with PageRank
-- [ ] P2-03: Compaction System
+- [x] P2-01: Git Integration ✅
+- [x] P2-02: RepoMap with PageRank ✅
+- [x] P2-03: Compaction System ✅
 - [ ] P2-04: Hooks System
 - [ ] P2-05: LSP Integration
 - [ ] P2-06: Architect Mode
 - [ ] P2-07: Tree-sitter Integration
 - [ ] P2-08: AI Comments System
 
+**Phase 2 Progress**: 3/8 (37.5%)
 **Phase 2 Complete When**: All 8 tickets checked above

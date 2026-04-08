@@ -154,4 +154,51 @@ All source code is located at:
 ---
 
 **Last Updated**: 2026-04-08
-**Status**: READY FOR IMPLEMENTATION
+**Status**: PHASE 1 COMPLETE ✅ | AI INTEGRATION TESTED ✅ | PHASE 2: 3/8 COMPLETE
+
+## Phase 1: COMPLETE ✅
+
+| Ticket | Component | Status | Test |
+|--------|-----------|--------|------|
+| P1-01 | Tool System (5 tools) | ✅ DONE | test-p1.ts |
+| P1-02 | TUI Framework (Ink) | ✅ DONE | test-tui.ts |
+| P1-03 | Core Engine (tokens, loop) | ✅ DONE | test-p1.ts |
+| P1-04 | Mode System (6 modes) | ✅ DONE | test-p1.ts |
+| P1-05 | Configuration (YAML) | ✅ DONE | test-p1.ts |
+| P1-06 | State Persistence (SQLite) | ✅ DONE | test-p1.ts |
+
+**AI Integration**: ✅ TESTED with OpenRouter `qwen/qwen3.6-plus`
+**Test File**: `test-full-agent.ts` - Full agent loop with tool execution
+
+## Phase 2: IN PROGRESS (3/8 COMPLETE)
+
+| Ticket | Focus | Status |
+|--------|-------|--------|
+| P2-01 | Git Integration | ✅ DONE |
+| P2-02 | RepoMap with PageRank | ✅ DONE |
+| P2-03 | Compaction System | ✅ DONE |
+| P2-04 | Hooks System | TODO |
+| P2-05 | LSP Integration | TODO |
+| P2-06 | Architect Mode | TODO |
+| P2-07 | Tree-sitter Integration | TODO |
+| P2-08 | AI Comments System | TODO |
+
+### Phase 2 Complete Features
+
+**P2-01 Git Integration** (src/git/index.ts):
+- 6-flag attribution system (author, committer, co-authored-by trailers)
+- Pre-commit hook enforcement (never bypass)
+- Ghost commits via `git commit-tree`
+- Status, diff, branch, log operations
+
+**P2-02 RepoMap with PageRank** (src/repomap/index.ts):
+- PageRank algorithm for file ranking
+- Tag extraction from code (functions, classes, interfaces)
+- Dependency graph building from imports
+- Chat mention boosting + name pattern matching
+
+**P2-03 Compaction System** (src/compaction/index.ts):
+- 50K token budget with protected user turns
+- Image stripping (`![alt](url)` → `[image]`)
+- File restoration (last 5 files)
+- Micro-compact (20% reduction for minor pruning)
