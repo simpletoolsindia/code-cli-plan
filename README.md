@@ -2,9 +2,7 @@
 
 A next-generation AI coding CLI built by analyzing the best features from Claude Code, Codex-RS, Aider, Cline, and OpenCode.
 
-## Status: Phase 1 Complete ✅
-
-All Phase 1 tickets (P1-01 through P1-06) have been **implemented and tested**.
+## Status: Phase 1 Complete ✅ | AI Integration Tested ✅
 
 ---
 
@@ -14,12 +12,11 @@ All Phase 1 tickets (P1-01 through P1-06) have been **implemented and tested**.
 # Navigate to project
 cd /home/sridhar/code-cli-plan
 
-# Run tests
+# Run Phase 1 tests
 ~/.bun/bin/bun test-p1.ts
 
-# Run individual tests
-~/.bun/bin/bun test-tools.ts    # P1-01: Tool System
-~/.bun/bin/bun test-tui.ts      # P1-02: TUI Framework
+# Run AI integration test
+~/.bun/bin/bun test-full-agent.ts
 ```
 
 ---
@@ -35,14 +32,16 @@ beast-cli/
 │   ├── modes/          # P1-04: Permission modes (plan, default, etc.)
 │   ├── config/         # P1-05: Configuration system
 │   └── state/          # P1-06: SQLite-backed persistence
+├── test-p1.ts          # Phase 1 integration test
+├── test-full-agent.ts  # AI agent loop test
+├── test-ai.ts          # AI API integration
 ├── test-tools.ts       # Tool system tests
-├── test-tui.ts         # TUI tests
-└── test-p1.ts          # Full Phase 1 integration test
+└── test-tui.ts         # TUI tests
 ```
 
 ---
 
-## Phase 1 Completed ✅
+## Phase 1: Completed ✅
 
 ### P1-01: Tool System Foundation ✅
 - **5 core tools**: Bash, Read, Edit, Glob, Grep
@@ -88,17 +87,55 @@ beast-cli/
 
 ---
 
-## Testing Results
+## AI Integration: Tested ✅
+
+### Model Tested
+- **Provider**: OpenRouter
+- **Model**: qwen/qwen3.6-plus
+- **API Key**: Configured and working
+
+### Test Results
+
+| Test | Status | Notes |
+|------|--------|-------|
+| Chat Completion | ✅ PASS | Model responds correctly |
+| Tool Awareness | ✅ PASS | Model identifies all 5 tools |
+| Tool Execution | ✅ PASS | JSON tool calls working |
+| Read Tool | ✅ PASS | Reads files with path/filePath/file_path params |
+| Glob Tool | ✅ PASS | Pattern matching working |
+| Grep Tool | ✅ PASS | Search functionality working |
+| Conversation Memory | ✅ PASS | Context maintained across turns |
+| Permission Modes | ✅ PASS | Mode-based tool filtering works |
+| Token Budget | ✅ PASS | 50K tracking operational |
+| State Persistence | ✅ PASS | Sessions saved to SQLite |
+
+### AI-Component Integration
 
 ```
-P1-01: Tool System Foundation      ✅ PASS
-P1-02: TUI Framework               ✅ PASS
-P1-03: Core Engine                 ✅ PASS
-P1-04: Mode System                 ✅ PASS
-P1-05: Configuration System        ✅ PASS
-P1-06: State Persistence           ✅ PASS
-
-All Phase 1 components: ✅ PASS
+OpenRouter API
+     ↓
+test-full-agent.ts (Agent Loop)
+     ↓
+┌─────────────────────────────────────────┐
+│  Tool Execution                         │
+│  • getTools() → getToolByName()         │
+│  • executeTool() → tool.call()          │
+│  • Permission check via canUseTool()    │
+└─────────────────────────────────────────┘
+     ↓
+┌─────────────────────────────────────────┐
+│  State Management                       │
+│  • createSession() → addMessage()        │
+│  • getHistory() → updateSession()        │
+│  • Bun SQLite via state/index.ts        │
+└─────────────────────────────────────────┘
+     ↓
+┌─────────────────────────────────────────┐
+│  Token Budget                            │
+│  • countTokens() → calculateTotalTokens() │
+│  • needsCompaction() → 50K budget        │
+│  • compaction trigger when exceeded      │
+└─────────────────────────────────────────┘
 ```
 
 ---
@@ -112,9 +149,10 @@ All Phase 1 components: ✅ PASS
 | TUI | Ink (React) |
 | MCP | @modelcontextprotocol/sdk |
 | Git | simple-git |
-| AI | Vercel AI SDK |
+| AI | Vercel AI SDK + OpenRouter |
 | Validation | Zod |
 | CLI Parser | cac |
+| Database | Bun SQLite |
 
 ---
 
@@ -126,6 +164,16 @@ All Phase 1 components: ✅ PASS
 | P3 | Ecosystem (MCP, Multi-Provider, Ghost Commits) | TODO |
 | P4 | Polish (Memory, Sandbox, Batch Tools) | TODO |
 | Future | Multi-Agent, Desktop App | TODO |
+
+### Phase 2 Preview (P2)
+- **P2-01**: Git Integration (6-flag attribution, ghost commits)
+- **P2-02**: RepoMap with PageRank (Aider-style)
+- **P2-03**: Compaction System (50K token budget)
+- **P2-04**: Hooks System (pre/post tool hooks)
+- **P2-05**: LSP Integration (OpenCode-style)
+- **P2-06**: Architect Mode (dual model)
+- **P2-07**: Tree-sitter Integration
+- **P2-08**: AI Comments System (// ai!)
 
 ---
 

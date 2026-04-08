@@ -3,10 +3,16 @@ import { buildTool, type Tool } from './Tool.ts'
 
 // Input schema
 const FileReadToolInputSchema = z.object({
-  filePath: z.string().describe('Path to the file to read'),
+  filePath: z.string().describe('Path to the file to read').optional(),
+  file_path: z.string().describe('Path to the file to read (alternative)').optional(),
   limit: z.number().optional().describe('Maximum number of lines to read'),
   offset: z.number().optional().describe('Line offset to start reading from'),
 })
+
+// Get file path from input (handle both naming conventions)
+function getFilePath(input: z.infer<typeof FileReadToolInputSchema>): string | undefined {
+  return input.filePath ?? input.file_path ?? (input as any).path
+}
 
 // Constants
 const MAX_FILE_SIZE = 1_000_000 // 1MB
@@ -22,10 +28,17 @@ export type FileReadToolOutput = {
 
 // Read file helper
 async function readFile(
-  filePath: string,
-  limit?: number,
-  offset?: number
+  input: z.infer<typeof FileReadToolInputSchema>,
 ): Promise<FileReadToolOutput> {
+  const filePath = getFilePath(input)
+  if (!filePath) {
+    return {
+      content: 'Error: No file path provided. Use filePath or file_path parameter.',
+      lines: 0,
+      truncated: false,
+    }
+  }
+
   const { readFileSync, statSync } = await import('node:fs')
 
   try {
@@ -45,14 +58,14 @@ async function readFile(
 
     // Apply offset and limit
     const lines = content.split('\n')
-    let startIndex = offset ?? 0
+    let startIndex = input.offset ?? 0
 
     // Negative offset from end
-    if (offset && offset < 0) {
-      startIndex = Math.max(0, totalLines + offset)
+    if (input.offset && input.offset < 0) {
+      startIndex = Math.max(0, totalLines + input.offset)
     }
 
-    const endIndex = limit ? Math.min(startIndex + limit, totalLines) : totalLines
+    const endIndex = input.limit ? Math.min(startIndex + input.limit, totalLines) : totalLines
     const selectedLines = lines.slice(startIndex, endIndex)
 
     content = selectedLines.join('\n')
@@ -90,7 +103,7 @@ export const FileReadTool = buildTool({
   searchHint: 'read file content',
 
   call: async (args, _context, _canUseTool) => {
-    const result = await readFile(args.filePath, args.limit, args.offset)
+    const result = await readFile(args)
     return { data: result }
   },
 
