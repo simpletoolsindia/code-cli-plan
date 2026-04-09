@@ -55,33 +55,34 @@ function parseConfig(content: string): Partial<BeastConfig> {
 
     // Parse key: value
     const match = line.match(/^(\w+):\s*(.+)$/)
-    if (match) {
+    if (match && match[1] && match[2]) {
       const key = match[1]
-      let value: unknown = match[2].trim()
+      const rawValue = match[2].trim()
+      let value: unknown = rawValue
 
       // Handle quoted strings
-      if (value.startsWith('"') && value.endsWith('"')) {
-        value = value.slice(1, -1)
-      } else if (value.startsWith("'") && value.endsWith("'")) {
-        value = value.slice(1, -1)
+      if (rawValue.startsWith('"') && rawValue.endsWith('"')) {
+        value = rawValue.slice(1, -1)
+      } else if (rawValue.startsWith("'") && rawValue.endsWith("'")) {
+        value = rawValue.slice(1, -1)
       }
 
       // Handle numbers
-      else if (!isNaN(Number(value))) {
-        value = Number(value)
+      else if (!isNaN(Number(rawValue))) {
+        value = Number(rawValue)
       }
 
       // Handle booleans
-      else if (value === 'true') {
+      else if (rawValue === 'true') {
         value = true
-      } else if (value === 'false') {
+      } else if (rawValue === 'false') {
         value = false
       }
 
       // Handle nested objects (simple, no indent handling)
-      else if (value.startsWith('{') && value.endsWith('}')) {
+      else if (rawValue.startsWith('{') && rawValue.endsWith('}')) {
         try {
-          value = JSON.parse(value)
+          value = JSON.parse(rawValue)
         } catch {
           // Keep as string
         }

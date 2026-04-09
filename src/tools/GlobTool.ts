@@ -60,7 +60,8 @@ async function globFiles(
         // Match with wildcard
         const regex = new RegExp('^' + part.replace(/\*/g, '.*') + '$')
         if (pathIndex >= pathParts.length) return false
-        if (!regex.test(pathParts[pathIndex])) return false
+        const currentPath = pathParts[pathIndex]
+        if (!currentPath || !regex.test(currentPath)) return false
         pathIndex++
       } else {
         // Exact match

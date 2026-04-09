@@ -318,8 +318,13 @@ export async function getLog(
     .split('\n')
     .filter(Boolean)
     .map((line) => {
-      const [hash, message, author, date] = line.split('|')
-      return { hash, message, author, date }
+      const parts = line.split('|')
+      return {
+        hash: parts[0] ?? '',
+        message: parts[1] ?? '',
+        author: parts[2] ?? '',
+        date: parts[3] ?? '',
+      }
     })
 }
 

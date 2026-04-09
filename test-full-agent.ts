@@ -6,7 +6,7 @@ const BASE_URL = 'https://openrouter.ai/api/v1'
 
 import { getTools, getToolByName } from './src/tools/index.ts'
 import { createSession, addMessage, getHistory, updateSession } from './src/state/index.ts'
-import { countTokens, calculateTotalTokens, needsCompaction, createTurn } from './src/engine/index.ts'
+import { countTokens, calculateTotalTokens, shouldAutoCompact, createTurn } from './src/engine/index.ts'
 import { canUseTool, modeConfigs, type PermissionMode } from './src/modes/index.ts'
 import { loadConfig } from './src/config/index.ts'
 import type { Message } from './src/engine/index.ts'

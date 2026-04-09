@@ -65,6 +65,7 @@ function getProtectedMessages(messages: Message[]): Message[] {
   // Go through messages in reverse, stop when we hit enough user turns
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i]
+    if (!msg) continue
 
     if (msg.role === 'user') {
       userTurns++
@@ -98,7 +99,7 @@ export function compact(
   const preservedTokens = countMessageTokens(preserved)
 
   // Calculate budget for earlier messages
-  const availableTokens = config.maxTokens - protectedTokens
+  const availableTokens = config.maxTokens - preservedTokens
 
   // Group older messages by file/operation
   const groupedMessages = new Map<string, Message[]>()
@@ -107,13 +108,15 @@ export function compact(
 
   for (let i = 0; i < messages.length - preserved.length; i++) {
     const msg = messages[i]
+    if (!msg) continue
+
     const msgTokens = countTokens(msg.content)
 
     // Check if this is a tool result
-    if (msg.role === 'assistant' && msg.content.includes('Tool Use:')) {
+    if (msg.role === 'assistant' && typeof msg.content === 'string' && msg.content.includes('Tool Use:')) {
       // Extract file name from tool use
       const fileMatch = msg.content.match(/File(?:Read|Edit|Write):\s*(\S+)/)
-      if (fileMatch) {
+      if (fileMatch && fileMatch[1]) {
         currentGroup = fileMatch[1]
       }
     }
@@ -123,7 +126,11 @@ export function compact(
       if (!groupedMessages.has(currentGroup)) {
         groupedMessages.set(currentGroup, [])
       }
-      groupedMessages.get(currentGroup)!.push(msg)
+
+      const group = groupedMessages.get(currentGroup)
+      if (group) {
+        group.push(msg)
+      }
       currentGroupTokens += msgTokens
     }
   }
@@ -150,7 +157,7 @@ export function compact(
   // Build final message list
   const compactedMessages = [compactionSummary, ...preserved]
 
-  const newTokens = countMessageTokens(compacted)
+  const newTokens = countMessageTokens(compactedMessages)
   const tokensSaved = originalTokens - newTokens
 
   return {

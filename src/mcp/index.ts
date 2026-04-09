@@ -26,7 +26,9 @@ export interface OAuthConfig {
   scopes?: string[]
 }
 
-export type TransportType = 'stdio' | 'sse' | 'http'
+export type TransportType = 'stdio' | 'sse' | 'http' | 'websocket'
+
+// ─── Core Interfaces ─────────────────────────────────────────────────────────────
 
 export interface MCPTransport {
   connect(): Promise<void>
@@ -80,7 +82,8 @@ export interface MCPNotification {
   params?: unknown
 }
 
-// JSON-RPC transport base
+// ─── Transport Base ─────────────────────────────────────────────────────────────
+
 abstract class BaseTransport implements MCPTransport {
   protected connected = false
   protected requestId = 0
@@ -117,9 +120,10 @@ abstract class BaseTransport implements MCPTransport {
       const msg = JSON.parse(message) as MCPResponse | MCPNotification
 
       if ('id' in msg && msg.id !== undefined) {
-        const pending = this.pendingRequests.get(typeof msg.id === 'string' ? parseInt(msg.id) : msg.id)
+        const numericId = typeof msg.id === 'string' ? parseInt(msg.id, 10) : msg.id
+        const pending = this.pendingRequests.get(numericId)
         if (pending) {
-          this.pendingRequests.delete(typeof msg.id === 'string' ? parseInt(msg.id) : msg.id)
+          this.pendingRequests.delete(numericId)
           if ('error' in msg && msg.error) {
             pending.reject(new Error(msg.error.message))
           } else if ('result' in msg) {
@@ -143,6 +147,97 @@ abstract class BaseTransport implements MCPTransport {
   }
 }
 
+// ─── WebSocket Transport ─────────────────────────────────────────────────────────
+export class WebSocketTransport extends BaseTransport {
+  private socket?: globalThis.WebSocket
+  private baseUrl: string
+  private sessionId?: string
+  private abortController?: AbortController
+  private reconnectAttempts = 0
+  private readonly maxReconnectAttempts = 3
+
+  constructor(url: string, private headers: Record<string, string> = {}) {
+    super()
+    this.baseUrl = url.replace(/^http/, 'ws')
+  }
+
+  async connect(): Promise<void> {
+    this.abortController = new AbortController()
+
+    await new Promise<void>((resolve, reject) => {
+      try {
+        this.socket = new globalThis.WebSocket(this.baseUrl)
+
+        this.socket.onopen = () => {
+          // Initialize MCP session
+          this.send('initialize', {
+            protocolVersion: '2024-11-05',
+            capabilities: { tools: {}, roots: { listChanged: true } },
+            clientInfo: { name: 'beast-cli', version: '1.0.0' },
+          }).then(() => {
+            this.connected = true
+            this.reconnectAttempts = 0
+            resolve()
+          }).catch(reject)
+        }
+
+        this.socket.onmessage = (event) => {
+          const message = event.data.toString()
+          if (message.trim()) {
+            this.handleMessage(message)
+          }
+        }
+
+        this.socket.onerror = (error) => {
+          console.error('[MCP WebSocket error]:', error)
+        }
+
+        this.socket.onclose = async () => {
+          this.connected = false
+          this.onDisconnect?.()
+
+          // Attempt reconnection if not intentionally closed
+          if (this.reconnectAttempts < this.maxReconnectAttempts) {
+            this.reconnectAttempts++
+            console.log(`[MCP] WebSocket closed, reconnecting (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`)
+            await new Promise(r => setTimeout(r, 1000 * this.reconnectAttempts))
+            try {
+              await this.connect()
+            } catch {
+              // Reconnection failed, give up
+            }
+          }
+        }
+      } catch (error) {
+        reject(error)
+      }
+    })
+  }
+
+  async disconnect(): Promise<void> {
+    this.reconnectAttempts = this.maxReconnectAttempts // Prevent reconnection
+    this.abortController?.abort()
+    this.socket?.close()
+    this.connected = false
+  }
+
+  async sendRaw(message: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket || this.socket.readyState !== globalThis.WebSocket.OPEN) {
+        reject(new Error('WebSocket not connected'))
+        return
+      }
+
+      try {
+        this.socket.send(message)
+        resolve()
+      } catch (error) {
+        reject(error)
+      }
+    })
+  }
+}
+
 // Stdio Transport
 export class StdioTransport extends BaseTransport {
   private process?: ReturnType<typeof import('child_process').spawn>
@@ -162,25 +257,21 @@ export class StdioTransport extends BaseTransport {
     this.process = spawn(this.command, this.args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, ...this.env },
-      shell: true,
     })
 
-    let buffer = ''
-
     this.process.stdout?.on('data', (data: Buffer) => {
-      buffer += data.toString()
-      const lines = buffer.split('\n')
-      buffer = lines.pop() ?? ''
+      const message = data.toString()
+      const lines = message.split('\n').filter(Boolean)
       for (const line of lines) {
-        if (line.trim()) this.handleMessage(line)
+        this.handleMessage(line)
       }
     })
 
     this.process.stderr?.on('data', (data: Buffer) => {
-      console.error('[MCP Stdio stderr]:', data.toString())
+      console.error('[MCP Stderr]:', data.toString())
     })
 
-    this.process.on('close', () => {
+    this.process.on('exit', () => {
       this.connected = false
       this.onDisconnect?.()
     })
@@ -188,28 +279,32 @@ export class StdioTransport extends BaseTransport {
     // Send initialize
     await this.send('initialize', {
       protocolVersion: '2024-11-05',
-      capabilities: { roots: { listChanged: true } },
+      capabilities: { tools: {} },
       clientInfo: { name: 'beast-cli', version: '1.0.0' },
     })
 
     this.connected = true
+
+    // Flush write buffer
+    for (const msg of this.writeBuffer) {
+      await this.sendRaw(msg)
+    }
+    this.writeBuffer = []
   }
 
   async disconnect(): Promise<void> {
-    if (this.process) {
-      this.process.kill()
-      this.process = undefined
-    }
+    this.process?.kill()
     this.connected = false
   }
 
   async sendRaw(message: string): Promise<void> {
+    if (!this.connected) {
+      this.writeBuffer.push(message)
+      return
+    }
+
     return new Promise((resolve, reject) => {
-      if (!this.process?.stdin) {
-        reject(new Error('Process stdin not available'))
-        return
-      }
-      this.process.stdin.write(message + '\n', (err) => {
+      this.process?.stdin?.write(message + '\n', (err) => {
         if (err) reject(err)
         else resolve()
       })
@@ -217,11 +312,11 @@ export class StdioTransport extends BaseTransport {
   }
 }
 
-// SSE Transport
+// SSE Transport (Server-Sent Events)
 export class SSETransport extends BaseTransport {
-  private eventSource?: EventSource
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private eventSource?: any
   private baseUrl: string
-  private abortController?: AbortController
 
   constructor(url: string, private headers: Record<string, string> = {}) {
     super()
@@ -229,64 +324,53 @@ export class SSETransport extends BaseTransport {
   }
 
   async connect(): Promise<void> {
-    this.abortController = new AbortController()
+    // EventSource is browser-only - for Node.js, use HTTP transport instead
+    if (typeof globalThis.EventSource === 'undefined') {
+      throw new Error('EventSource not available in this environment. Use HTTP transport.')
+    }
 
-    // Use fetch with SSE
-    const response = await fetch(this.baseUrl, {
-      method: 'GET',
-      headers: this.headers,
-      signal: this.abortController.signal,
-    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const EventSourceConstructor = globalThis.EventSource as any
+    this.eventSource = new EventSourceConstructor(this.baseUrl)
 
-    if (!response.body) throw new Error('No response body')
-
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-    let buffer = ''
-
-    // Process SSE stream
-    ;(async () => {
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() ?? ''
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6)
-            if (data === '[DONE]') break
-            this.handleMessage(data)
-          }
-        }
+    this.eventSource.onmessage = (event: { data: string }) => {
+      if (event.data.trim()) {
+        this.handleMessage(event.data)
       }
-    })()
+    }
+
+    this.eventSource.onerror = () => {
+      this.connected = false
+      this.onDisconnect?.()
+    }
+
+    // Send initialize
+    await this.send('initialize', {
+      protocolVersion: '2024-11-05',
+      capabilities: { tools: {} },
+      clientInfo: { name: 'beast-cli', version: '1.0.0' },
+    })
 
     this.connected = true
   }
 
   async disconnect(): Promise<void> {
-    this.abortController?.abort()
     this.eventSource?.close()
     this.connected = false
   }
 
   async sendRaw(message: string): Promise<void> {
-    await fetch(`${this.baseUrl}/rpc`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...this.headers },
-      body: message,
-    })
+    // SSE is receive-only, so this is a no-op
+    // For bidirectional, use HTTP POST endpoint
+    console.warn('[MCP SSE] sendRaw called on SSE-only transport')
   }
 }
 
-// StreamableHTTP Transport
+// HTTP Transport (long-polling or webhooks)
 export class HTTPTransport extends BaseTransport {
   private baseUrl: string
-  private sessionId?: string
-  private abortController?: AbortController
+  private pollInterval?: ReturnType<typeof setInterval>
+  private lastEventId?: string
 
   constructor(url: string, private headers: Record<string, string> = {}) {
     super()
@@ -294,101 +378,76 @@ export class HTTPTransport extends BaseTransport {
   }
 
   async connect(): Promise<void> {
-    this.abortController = new AbortController()
-
-    // Initialize session
-    const initRes = await fetch(this.baseUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...this.headers },
-      body: JSON.stringify({ jsonrpc: '2.0', method: 'initialize', id: 1, params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'beast-cli', version: '1.0.0' } } }),
+    // Send initialize
+    await this.send('initialize', {
+      protocolVersion: '2024-11-05',
+      capabilities: { tools: {} },
+      clientInfo: { name: 'beast-cli', version: '1.0.0' },
     })
-
-    if (initRes.headers.has('mcp-session-id')) {
-      this.sessionId = initRes.headers.get('mcp-session-id') ?? undefined
-    }
-
-    // Start streaming
-    const streamRes = await fetch(this.baseUrl, {
-      method: 'GET',
-      headers: this.sessionId ? { 'MCP-Session-ID': this.sessionId, ...this.headers } : this.headers,
-      signal: this.abortController.signal,
-    })
-
-    if (!streamRes.body) throw new Error('No response body')
-
-    const reader = streamRes.body.getReader()
-    const decoder = new TextDecoder()
-    let buffer = ''
-
-    ;(async () => {
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        while (buffer.includes('\n')) {
-          const idx = buffer.indexOf('\n')
-          const line = buffer.slice(0, idx)
-          buffer = buffer.slice(idx + 1)
-          if (line.trim()) this.handleMessage(line)
-        }
-      }
-    })()
 
     this.connected = true
+
+    // Start polling for notifications
+    this.pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`${this.baseUrl}/notifications`, {
+          headers: {
+            ...this.headers,
+            ...(this.lastEventId ? { 'Last-Event-ID': this.lastEventId } : {}),
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json() as { notifications?: unknown[]; lastEventId?: string }
+          if (data.notifications?.length) {
+            for (const notification of data.notifications) {
+              this.handleMessage(JSON.stringify(notification))
+            }
+          }
+          if (data.lastEventId) {
+            this.lastEventId = data.lastEventId
+          }
+        }
+      } catch (e) {
+        console.error('[MCP HTTP poll error]:', e)
+      }
+    }, 5000)
   }
 
   async disconnect(): Promise<void> {
-    this.abortController?.abort()
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval)
+    }
     this.connected = false
   }
 
   async sendRaw(message: string): Promise<void> {
-    await fetch(this.baseUrl, {
+    await fetch(`${this.baseUrl}/messages`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(this.sessionId ? { 'MCP-Session-ID': this.sessionId } : {}),
-        ...this.headers,
-      },
+      headers: { 'Content-Type': 'application/json', ...this.headers },
       body: message,
     })
   }
 }
 
-// MCP Client wrapper
-export class MCPClientImpl implements MCPClient {
-  private transport: MCPTransport
-  private capabilities?: { tools?: unknown }
+// ─── MCP Client ────────────────────────────────────────────────────────────────
 
-  constructor(config: MCPServerConfig) {
-    if (config.command) {
-      this.transport = new StdioTransport(
-        config.command[0],
-        config.command.slice(1),
-        config.env ?? {}
-      )
-    } else if (config.url) {
-      this.transport = new HTTPTransport(config.url, config.headers)
-    } else {
-      throw new Error('Either command or url must be provided')
-    }
+export class MCPClientImpl implements MCPClient {
+  private transport: BaseTransport
+  private tools: MCTool[] = []
+
+  constructor(transport: BaseTransport) {
+    this.transport = transport
   }
 
   async connect(): Promise<void> {
     await this.transport.connect()
 
-    // Initialize
-    const result = await this.transport.send('initialize', {
-      protocolVersion: '2024-11-05',
-      capabilities: { tools: {} },
-      clientInfo: { name: 'beast-cli', version: '1.0.0' },
-    }) as { capabilities?: { tools?: unknown } }
-
-    this.capabilities = result?.capabilities
-
-    // Send initialized notification
-    await this.transport.send('notifications/initialized', {})
+    // List available tools
+    const result = await this.transport.send('tools/list') as { tools?: MCTool[] }
+    if (result.tools) {
+      this.tools = result.tools
+    }
   }
 
   async disconnect(): Promise<void> {
@@ -396,12 +455,21 @@ export class MCPClientImpl implements MCPClient {
   }
 
   async listTools(): Promise<MCTool[]> {
-    const result = await this.transport.send('tools/list')
-    return (result as { tools?: MCTool[] })?.tools ?? []
+    if (!this.transport.isConnected()) {
+      throw new Error('Not connected')
+    }
+
+    const result = await this.transport.send('tools/list') as { tools?: MCTool[] }
+    return result.tools ?? []
   }
 
   async callTool(name: string, args?: Record<string, unknown>): Promise<ToolResult> {
-    return await this.transport.send('tools/call', { name, arguments: args }) as ToolResult
+    if (!this.transport.isConnected()) {
+      throw new Error('Not connected')
+    }
+
+    const result = await this.transport.send('tools/call', { name, arguments: args }) as ToolResult
+    return result
   }
 
   onNotification(handler: (method: string, params?: unknown) => void): void {
@@ -409,148 +477,57 @@ export class MCPClientImpl implements MCPClient {
   }
 }
 
-// MCP Hub - manages multiple servers
+// ─── MCP Manager ────────────────────────────────────────────────────────────────
+
 export class MCPHub {
   private clients = new Map<string, MCPClient>()
-  private config: MCPConfig
-
-  constructor(config: MCPConfig) {
-    this.config = config
+  private transportFactories: Record<TransportType, (config: MCPServerConfig) => BaseTransport> = {
+    stdio: (config) => new StdioTransport(config.command?.[0] ?? '', config.command?.slice(1) ?? [], config.env ?? {}),
+    websocket: (config) => new WebSocketTransport(config.url ?? '', config.headers ?? {}),
+    sse: (config) => new SSETransport(config.url ?? '', config.headers ?? {}),
+    http: (config) => new HTTPTransport(config.url ?? '', config.headers ?? {}),
   }
 
-  async connect(): Promise<void> {
-    for (const server of this.config.servers) {
-      try {
-        const client = new MCPClientImpl(server)
-        await client.connect()
-        this.clients.set(server.name, client)
-        console.log(`[MCP] Connected to ${server.name}`)
-      } catch (e) {
-        console.error(`[MCP] Failed to connect to ${server.name}:`, e)
-      }
-    }
+  async addServer(config: MCPServerConfig): Promise<void> {
+    const url = config.url ?? ''
+    const transportType = this.detectTransport(url, config.command)
+    const factory = this.transportFactories[transportType]
+    if (!factory) throw new Error(`Unknown transport type: ${transportType}`)
+
+    const transport = factory(config)
+    const client = new MCPClientImpl(transport as BaseTransport)
+
+    await client.connect()
+    this.clients.set(config.name, client)
   }
 
-  async disconnect(): Promise<void> {
-    for (const [name, client] of this.clients) {
-      await client.disconnect()
-      console.log(`[MCP] Disconnected from ${name}`)
+  removeServer(name: string): void {
+    const client = this.clients.get(name)
+    if (client) {
+      client.disconnect()
+      this.clients.delete(name)
     }
-    this.clients.clear()
   }
 
   getClient(name: string): MCPClient | undefined {
     return this.clients.get(name)
   }
 
-  async listAllTools(): Promise<Array<{ server: string; tool: MCTool }>> {
-    const tools: Array<{ server: string; tool: MCTool }> = []
-
-    for (const [name, client] of this.clients) {
-      try {
-        const clientTools = await client.listTools()
-        for (const tool of clientTools) {
-          tools.push({ server: name, tool })
-        }
-      } catch (e) {
-        console.error(`[MCP] Failed to list tools from ${name}:`, e)
-      }
+  async getAllTools(): Promise<MCTool[]> {
+    const tools: MCTool[] = []
+    for (const client of this.clients.values()) {
+      const clientTools = await client.listTools()
+      tools.push(...clientTools)
     }
-
     return tools
   }
 
-  // Generate short unique key for tool
-  static shortKey(name: string): string {
-    let hash = 0
-    for (let i = 0; i < name.length; i++) {
-      const char = name.charCodeAt(i)
-      hash = ((hash << 5) - hash) + char
-      hash = hash & hash
-    }
-    return Math.abs(hash).toString(36).slice(0, 6)
+  private detectTransport(url: string, command?: string[]): TransportType {
+    if (command?.length) return 'stdio'
+    if (url.startsWith('ws://') || url.startsWith('wss://')) return 'websocket'
+    if (url.startsWith('http://') || url.startsWith('https://')) return 'http'
+    return 'stdio'
   }
 }
 
-// OAuth Manager
-export class MCPOAuthManager {
-  private tokens = new Map<string, { access_token: string; refresh_token?: string; expires_at?: number }>()
-
-  constructor(private configs: Map<string, OAuthConfig>) {}
-
-  async getToken(serverName: string): Promise<string> {
-    const token = this.tokens.get(serverName)
-    if (token && (!token.expires_at || token.expires_at > Date.now())) {
-      return token.access_token
-    }
-
-    const config = this.configs.get(serverName)
-    if (!config) throw new Error(`No OAuth config for ${serverName}`)
-
-    // Perform OAuth flow
-    const newToken = await this.performOAuthFlow(config)
-    this.tokens.set(serverName, newToken)
-    return newToken.access_token
-  }
-
-  private async performOAuthFlow(config: OAuthConfig): Promise<{ access_token: string; refresh_token?: string; expires_at?: number }> {
-    // Generate PKCE verifier and challenge
-    const verifier = this.generateRandomString(64)
-    const challenge = await this.sha256(verifier)
-
-    // Build auth URL
-    const authUrl = new URL(config.authUrl)
-    authUrl.searchParams.set('client_id', config.clientId)
-    authUrl.searchParams.set('response_type', 'code')
-    authUrl.searchParams.set('redirect_uri', 'http://localhost:3000/callback')
-    authUrl.searchParams.set('scope', config.scopes?.join(' ') ?? 'read')
-    authUrl.searchParams.set('code_challenge', challenge)
-    authUrl.searchParams.set('code_challenge_method', 'S256')
-    authUrl.searchParams.set('state', this.generateRandomString(16))
-
-    console.log(`[MCP OAuth] Open: ${authUrl.toString()}`)
-
-    // In real implementation, would start local server and wait for callback
-    // For now, return mock token
-    return {
-      access_token: 'mock_access_token',
-      expires_at: Date.now() + 3600000,
-    }
-  }
-
-  private generateRandomString(length: number): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~'
-    const array = new Uint8Array(length)
-    crypto.getRandomValues(array)
-    return Array.from(array, byte => chars[byte % chars.length]).join('')
-  }
-
-  private async sha256(plain: string): Promise<string> {
-    const encoder = new TextEncoder()
-    const data = encoder.encode(plain)
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    return btoa(String.fromCharCode(...hashArray))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '')
-  }
-}
-
-// Default config
-export const defaultMCPConfig: MCPConfig = {
-  servers: [],
-  timeout: 30000,
-  retryAttempts: 6,
-  retryBaseDelay: 2000,
-}
-
-export default {
-  MCPClientImpl,
-  MCPHub,
-  MCPOAuthManager,
-  StdioTransport,
-  SSETransport,
-  HTTPTransport,
-  defaultMCPConfig,
-}
+export default MCPHub

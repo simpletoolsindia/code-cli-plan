@@ -3,7 +3,7 @@ import { StatusBar, Markdown, Diff } from './src/tui/index.ts'
 import { modeConfigs, canUseTool, getNextMode, modeOrder } from './src/modes/index.ts'
 import { loadConfig, validateConfig, defaultConfig } from './src/config/index.ts'
 import { initDB, createSession, addMessage, getHistory, setCache, getCache, listSessions } from './src/state/index.ts'
-import { countTokens, calculateTotalTokens, needsCompaction, createTurn, addToolCall } from './src/engine/index.ts'
+import { countTokens, calculateTotalTokens, shouldAutoCompact, createTurn, addToolCall } from './src/engine/index.ts'
 
 console.log('🐉 Beast CLI - Phase 1 Full Test\n')
 

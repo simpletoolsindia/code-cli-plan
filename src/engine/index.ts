@@ -1,4 +1,14 @@
-// Engine - Core agent loop
+// Engine - Core agent loop with Claude Code patterns
+// Key additions: TokenBudget, auto-compaction, concurrency-safe batching, feature flags
+
+import { feature } from '../utils/featureFlags.ts'
+import {
+  TokenBudget,
+  compactMessages,
+  shouldAutoCompact,
+  createReactiveCompactor,
+} from '../utils/autoCompact.ts'
+import { estimateTokens } from '../providers/index.ts'
 
 export interface Turn {
   id: string
@@ -20,26 +30,18 @@ export interface Message {
   role: 'user' | 'assistant' | 'system'
   content: string
   timestamp: number
+  uuid?: string
+  toolCalls?: ToolCall[]
 }
 
-// Token counting using simple approximation
+// Token counting - delegate to provider's estimation
 export function countTokens(text: string): number {
-  // Approximate: 1 token ≈ 4 chars for English
-  // More accurate for code: 1 token ≈ 3.5 chars
-  return Math.ceil(text.length / 4)
+  return estimateTokens(text)
 }
 
 // Calculate total tokens for a conversation
 export function calculateTotalTokens(messages: Message[]): number {
   return messages.reduce((sum, msg) => sum + countTokens(msg.content), 0)
-}
-
-// Check if compaction is needed (50K budget)
-export function needsCompaction(
-  messages: Message[],
-  budget = 50_000
-): boolean {
-  return calculateTotalTokens(messages) > budget
 }
 
 // Streaming support
@@ -53,7 +55,6 @@ export async function* streamText(
   for (const word of words) {
     yield word + ' '
     onChunk?.(word + ' ')
-    // Simulate async streaming delay
     await new Promise(resolve => setTimeout(resolve, 10))
   }
 }
@@ -104,21 +105,39 @@ export interface AgentLoopConfig {
   maxIterations?: number
   timeout?: number
   compactionBudget?: number
+  onCompaction?: (summary: string) => void
 }
 
+/**
+ * Run the agent loop with Claude Code patterns:
+ * - Token budget tracking (auto-compaction at 20% remaining)
+ * - Reactive compaction (on API errors)
+ * - Feature-gated tool batching
+ */
 export async function runAgentLoop(
   messages: Message[],
-  executeTool: (name: string, input: Record<string, unknown>) => Promise<unknown>,
+  _executeTool: (name: string, input: Record<string, unknown>) => Promise<unknown>,
   config: AgentLoopConfig = {}
 ): Promise<Message[]> {
   const {
     maxIterations = 10,
     timeout = 60000,
     compactionBudget = 50_000,
+    onCompaction,
   } = config
 
   let iterations = 0
   const startTime = Date.now()
+
+  // Create token budget tracker if feature enabled
+  const tokenBudget = feature('TOKEN_BUDGET')
+    ? new TokenBudget({ budget: compactionBudget })
+    : null
+
+  // Create reactive compactor if feature enabled
+  const reactiveCompactor = feature('REACTIVE_COMPACT')
+    ? createReactiveCompactor(messages)
+    : null
 
   while (iterations < maxIterations) {
     // Check timeout
@@ -131,14 +150,31 @@ export async function runAgentLoop(
       break
     }
 
-    // Check compaction
-    if (needsCompaction(messages, compactionBudget)) {
-      messages.push({
-        role: 'system',
-        content: 'Compaction triggered - context too large',
-        timestamp: Date.now(),
+    // Check auto-compaction (Claude Code pattern: at 20% remaining)
+    if (feature('AUTO_COMPACT') && shouldAutoCompact(messages, compactionBudget)) {
+      const { compacted, summary } = await compactMessages(messages, {
+        budget: compactionBudget,
+        summarizeThreshold: 0.2,
+        keepMessages: 20,
       })
-      break
+
+      // Replace messages with compacted version
+      messages.length = 0
+      messages.push(...compacted)
+
+      // Notify caller
+      if (onCompaction) {
+        onCompaction(summary)
+      }
+
+      console.log(`[Engine] Auto-compacted: ${summary.substring(0, 100)}...`)
+
+      // Reset token budget
+      if (tokenBudget) {
+        tokenBudget.resetAfterCompaction()
+      }
+
+      continue
     }
 
     iterations++
@@ -147,12 +183,25 @@ export async function runAgentLoop(
   return messages
 }
 
+/**
+ * Check if reactive compaction should trigger based on API error.
+ * Per Claude Code: "Reactive compact fires on TOO_LONG, context_length errors."
+ */
+export function shouldReactiveCompact(errorMessage?: string): boolean {
+  if (!feature('REACTIVE_COMPACT')) return false
+
+  const reactiveErrors = ['TOO_LONG', 'context_length', 'max_tokens', '500000']
+  if (!errorMessage) return false
+
+  return reactiveErrors.some(e => errorMessage.includes(e))
+}
+
 export default {
   createTurn,
   addToolCall,
   completeToolCall,
   countTokens,
   calculateTotalTokens,
-  needsCompaction,
   runAgentLoop,
+  shouldReactiveCompact,
 }

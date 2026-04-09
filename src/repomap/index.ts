@@ -93,13 +93,15 @@ function extractImports(content: string): string[] {
   const importPattern = /import\s+.*?from\s+['"]([^'"]+)['"]/g
   let match
   while ((match = importPattern.exec(content)) !== null) {
-    imports.push(match[1])
+    const importPath = match[1]
+    if (importPath) imports.push(importPath)
   }
 
   // Require statements
   const requirePattern = /require\(['"]([^'"]+)['"]\)/g
   while ((match = requirePattern.exec(content)) !== null) {
-    imports.push(match[1])
+    const requirePath = match[1]
+    if (requirePath) imports.push(requirePath)
   }
 
   return imports

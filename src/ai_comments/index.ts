@@ -62,12 +62,12 @@ export function extractAIComments(
     const line = lines[i]
 
     for (const { pattern, type } of AI_COMMENT_PATTERNS) {
-      if (pattern.test(line)) {
+      if (pattern.test(line ?? '')) {
         // Extract the comment content (after the AI marker)
-        const match = line.match(pattern)
-        if (match) {
-          const commandStart = match.index! + match[0].length
-          const command = line.substring(commandStart).trim()
+        const match = line?.match(pattern)
+        if (match && match[0]) {
+          const commandStart = (match.index ?? 0) + match[0].length
+          const command = (line ?? '').substring(commandStart).trim()
 
           // Get surrounding context (5 lines before and after)
           const startLine = Math.max(0, i - 5)

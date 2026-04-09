@@ -128,14 +128,14 @@ export const modeOrder: PermissionMode[] = [
 export function getNextMode(current: PermissionMode): PermissionMode {
   const currentIndex = modeOrder.indexOf(current)
   const nextIndex = (currentIndex + 1) % modeOrder.length
-  return modeOrder[nextIndex]
+  return modeOrder[nextIndex] ?? current
 }
 
 // Get previous mode in cycle
 export function getPreviousMode(current: PermissionMode): PermissionMode {
   const currentIndex = modeOrder.indexOf(current)
   const prevIndex = currentIndex === 0 ? modeOrder.length - 1 : currentIndex - 1
-  return modeOrder[prevIndex]
+  return modeOrder[prevIndex] ?? current
 }
 
 // Mode display info

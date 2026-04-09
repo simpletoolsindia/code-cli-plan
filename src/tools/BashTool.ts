@@ -25,13 +25,13 @@ function isReadOnlyCommand(command: string): boolean {
   ]
 
   const trimmed = command.trim()
-  const firstWord = trimmed.split(/\s+/)[0]
+  const firstWord = trimmed.split(/\s+/)[0] ?? ''
 
   // Check for pipes
   if (trimmed.includes('|')) {
     const parts = trimmed.split('|')
     return parts.every(part => {
-      const cmd = part.trim().split(/\s+/)[0]
+      const cmd = part.trim().split(/\s+/)[0] ?? ''
       return readOnlyCommands.includes(cmd)
     })
   }
@@ -57,27 +57,28 @@ async function executeCommand(
   command: string,
   timeout?: number
 ): Promise<BashToolOutput> {
-  const controller = new AbortController()
-  const timeoutId = timeout ? setTimeout(() => controller.abort(), timeout) : undefined
+  const { spawn } = await import('node:child_process')
 
-  try {
-    const { spawn } = await import('node:child_process')
-    const { promisify } = await import('node:util')
+  return new Promise((resolve) => {
+    let stdout = ''
+    let stderr = ''
+    let settled = false
 
-    const execAsync = promisify(spawn)
-    const parts = command.split(' ')
-    const cmd = parts[0]
-    const args = parts.slice(1)
+    const timeoutId = timeout ? setTimeout(() => {
+      if (!settled) {
+        settled = true
+        resolve({ stdout, stderr, exitCode: 124, timedOut: true })
+      }
+    }, timeout) : undefined
 
-    const child = execAsync(cmd, args, {
-      signal: controller.signal,
+    const cmd = command.trim().split(/\s+/)[0] ?? 'sh'
+    const args = command.trim().split(/\s+/).slice(1)
+
+    const child = spawn(cmd, args, {
       shell: true,
       cwd: process.cwd(),
       env: process.env as Record<string, string>,
     })
-
-    let stdout = ''
-    let stderr = ''
 
     child.stdout?.on('data', (data: Buffer) => {
       stdout += data.toString()
@@ -87,29 +88,22 @@ async function executeCommand(
       stderr += data.toString()
     })
 
-    const exitCode = await new Promise<number>((resolve, reject) => {
-      child.on('close', (code) => {
+    child.on('close', (code) => {
+      if (!settled) {
+        settled = true
         clearTimeout(timeoutId)
-        resolve(code ?? 1)
-      })
-      child.on('error', (err) => {
-        clearTimeout(timeoutId)
-        reject(err)
-      })
+        resolve({ stdout, stderr, exitCode: code ?? 1 })
+      }
     })
 
-    return { stdout, stderr, exitCode }
-
-  } catch (error: unknown) {
-    clearTimeout(timeoutId)
-
-    if (error instanceof Error && error.name === 'AbortError') {
-      return { stdout: '', stderr: 'Command timed out', exitCode: 124, timedOut: true }
-    }
-
-    const message = error instanceof Error ? error.message : String(error)
-    return { stdout: '', stderr: message, exitCode: 1 }
-  }
+    child.on('error', (err) => {
+      if (!settled) {
+        settled = true
+        clearTimeout(timeoutId)
+        resolve({ stdout, stderr, exitCode: 1 })
+      }
+    })
+  })
 }
 
 // Build the BashTool
@@ -132,7 +126,7 @@ export const BashTool = buildTool({
     return { data: result }
   },
 
-  description: async (input, _options) => {
+  description: async (input) => {
     const base = `Execute shell command: ${input.command}`
     const isRead = isReadOnlyCommand(input.command)
     return isRead
@@ -140,25 +134,15 @@ export const BashTool = buildTool({
       : base
   },
 
-  renderToolUseMessage: (input, _options) => {
+  renderToolUseMessage: (input) => {
     return `Bash: ${input.command}`
   },
 
   mapToolResultToToolResultBlockParam: (content, _toolUseID) => {
     const { stdout, stderr, exitCode, timedOut } = content
     const lines = [`$ ${stdout || ''}`, stderr ? `⚠️ ${stderr}` : '']
-
-    if (timedOut) {
-      lines.push('⏱️ Command timed out')
-    }
-
-    if (exitCode !== 0) {
-      lines.push(`Exit code: ${exitCode}`)
-    }
-
-    return {
-      type: 'tool_result',
-      content: lines.filter(Boolean).join('\n'),
-    }
+    if (timedOut) lines.push('⏱️ Command timed out')
+    if (exitCode !== 0) lines.push(`Exit: ${exitCode}`)
+    return { type: 'tool_result' as const, content: lines.filter(Boolean).join('\n') }
   },
 })

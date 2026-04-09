@@ -38,8 +38,5 @@ export function assembleToolPool(additionalTools: Tool[] = []): Tool[] {
   return tools
 }
 
-// Export individual tools for convenience
-export { BashTool, FileReadTool, FileEditTool, GlobTool, GrepTool }
-
 // Export types
-export type { BashTool, FileReadTool, FileEditTool, GlobTool, GrepTool }
+export type { Tool } from './Tool.ts'
